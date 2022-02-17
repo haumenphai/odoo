@@ -67,6 +67,14 @@ def parse_args():
         help="Launch standalone scripts tagged with @standalone. Accepts a list of "
              "module names or tags separated by commas. 'all' will run all available scripts."
     )
+    parser.add_argument("--db_host", type=str, help="Database Host")
+    parser.add_argument("--db_port", type=str, help="Database Port")
+    parser.add_argument("--db_user", type=str, help="Database User")
+    parser.add_argument("--db_password", type=str, help="Database Password")
+    parser.add_argument("--logfile", type=str, help="Log File")
+    parser.add_argument("--log-db", type=str, help="Logs to the ir.logging model")
+    parser.add_argument('--log-level', type=str, help="Log Level")
+    parser.add_argument('--load', dest="server_wide_modules", type=str, help='Server wide modules')
     return parser.parse_args()
 
 
@@ -134,6 +142,7 @@ def test_scripts(args):
     ))
 
     start_time = time.time()
+    failed = False
     for index, func in enumerate(funcs, start=1):
         with odoo.api.Environment.manage():
             with odoo.registry(args.database).cursor() as cr:
@@ -144,8 +153,10 @@ def test_scripts(args):
                     func(env)
                 except Exception:
                     _logger.error("Standalone script %s failed", func.__name__, exc_info=True)
+                    failed = True
 
     _logger.info("%d standalone scripts executed in %.2fs" % (len(funcs), time.time() - start_time))
+    return failed
 
 
 if __name__ == '__main__':
@@ -157,6 +168,22 @@ if __name__ == '__main__':
         if args.data_dir:
             odoo.tools.config['data_dir'] = args.data_dir
         odoo.modules.module.initialize_sys_path()
+    if args.db_host:
+        odoo.tools.config['db_host'] = args.db_host
+    if args.db_port:
+        odoo.tools.config['db_port'] = args.db_port
+    if args.db_user:
+        odoo.tools.config['db_user'] = args.db_user
+    if args.db_password:
+        odoo.tools.config['db_password'] = args.db_password
+    if args.logfile:
+        odoo.tools.config['logfile'] = args.logfile
+    if args.log_db:
+        odoo.tools.config['log_db'] = args.log_db
+    if args.log_level:
+        odoo.tools.config['log_level'] = args.log_level
+    if args.server_wide_modules:
+        odoo.tools.config['server_wide_modules'] = args.server_wide_modules
 
     init_logger()
     logging.getLogger('odoo.modules.loading').setLevel(logging.CRITICAL)
@@ -165,6 +192,7 @@ if __name__ == '__main__':
     if args.uninstall:
         test_uninstall(args)
     elif args.standalone:
-        test_scripts(args)
+        if test_scripts(args):
+            exit(1)
     else:
         test_full(args)
