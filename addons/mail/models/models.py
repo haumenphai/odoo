@@ -6,11 +6,13 @@ from lxml.builder import E
 from markupsafe import Markup
 
 from odoo import api, models, tools, _
+from odoo.addons.base.models.ir_model import IrModelFields
 from odoo.addons.mail.tools.alias_error import AliasError
 
 import logging
 
 _logger = logging.getLogger(__name__)
+
 
 class BaseModel(models.AbstractModel):
     _inherit = 'base'
@@ -18,8 +20,8 @@ class BaseModel(models.AbstractModel):
     def _valid_field_parameter(self, field, name):
         # allow tracking on abstract models; see also 'mail.thread'
         return (
-            name == 'tracking' and self._abstract
-            or super()._valid_field_parameter(field, name)
+                name == 'tracking' and self._abstract
+                or super()._valid_field_parameter(field, name)
         )
 
     # ------------------------------------------------------------
@@ -47,7 +49,7 @@ class BaseModel(models.AbstractModel):
 
         return {
             record.id: (
-                record_companies[record.id].alias_domain_id or default_domain
+                    record_companies[record.id].alias_domain_id or default_domain
             )
             for record in self
         }
@@ -177,6 +179,8 @@ class BaseModel(models.AbstractModel):
         """ Find tracking sequence of a given field, given their name. Current
         parameter 'tracking' should be an integer, but attributes with True
         are still supported; old naming 'track_sequence' also. """
+        if not fname in self._fields:
+            return 100
         sequence = getattr(
             self._fields[fname], 'tracking',
             getattr(self._fields[fname], 'track_sequence', 100)
@@ -312,10 +316,10 @@ class BaseModel(models.AbstractModel):
         # address itself is too long : return only email and log warning
         if len(record_email) >= length_limit:
             _logger.warning('Notification email address for reply-to is longer than 68 characters. '
-                'This might create non-compliant folding in the email header in certain DKIM '
-                'verification tech stacks. It is advised to shorten it if possible. '
-                'Record name (if set): %s '
-                'Reply-To: %s ', record_name, record_email)
+                            'This might create non-compliant folding in the email header in certain DKIM '
+                            'verification tech stacks. It is advised to shorten it if possible. '
+                            'Record name (if set): %s '
+                            'Reply-To: %s ', record_name, record_email)
             return record_email
 
         if not company:
